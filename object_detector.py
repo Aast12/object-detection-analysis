@@ -1,4 +1,4 @@
-import cv2 as cv
+import cv2
 import numpy as np
 from typing import List
 import pandas as pd
@@ -22,18 +22,18 @@ class ObjectDetector:
         with open(classes_path, 'rt') as f:
             self.classes = [line.strip() for line in f.readlines()]
 
-        self.net = cv.dnn.readNetFromDarknet(config_path, weights_path)
-        self.net.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
-        self.net.setPreferableTarget(cv.dnn.DNN_TARGET_CPU)
+        self.net = cv2.dnn.readNetFromDarknet(config_path, weights_path)
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
     def draw_labels(self, detections, img) -> None:
-        font = cv.FONT_HERSHEY_PLAIN
+        font = cv2.FONT_HERSHEY_PLAIN
         for detection in detections:
             x, y, w, h = detection.box
             label = str(self.classes[detection.class_id])
             color = (0, 0, 255)
-            cv.rectangle(img, (x, y), (x + w, y + h), color, 2)
-            cv.putText(img, label, (x, y - 5), font, 1, color, 1)
+            cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+            cv2.putText(img, label, (x, y - 5), font, 1, color, 1)
 
     def build_records(self, detections: List[Detection], frame_number, curr_ms):
         records = []
@@ -77,11 +77,11 @@ class ObjectDetector:
                     boxes.append([x, y, width, height])
 
         # Apply non maximum suppression to eliminate redundancy
-        indices = cv.dnn.NMSBoxes(
+        indices = cv2.dnn.NMSBoxes(
             boxes, confidences, CONF_THRESHOLD, NMS_THRESHOLD)
         filtered_boxes = [boxes[i[0]] for i in indices]
         filtered_classes = [class_ids[i[0]] for i in indices]
-        filtered_confidences = [class_ids[i[0]] for i in indices]
+        filtered_confidences = [confidences[i[0]] for i in indices]
 
         return [Detection(filtered_boxes[i], filtered_classes[i], filtered_confidences[i]) for i in range(len(filtered_boxes))]
 
@@ -94,28 +94,28 @@ class ObjectDetector:
 
         t, _ = self.net.getPerfProfile()
         label = 'Inference time: %.2f ms, frame: %d' % (
-            t * 1000.0 / cv.getTickFrequency())
+            t * 1000.0 / cv2.getTickFrequency())
 
-        cv.putText(frame, label, (0, 15),
-                    cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+        cv2.putText(frame, label, (0, 15),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
     def stream_webcam(self, camera_index=0):
-        cap = cv.VideoCapture(camera_index)
-        # vid_writer = cv.VideoWriter(output_file, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'), 30, (round(cap.get(cv.CAP_PROP_FRAME_WIDTH)), round(cap.get(cv.CAP_PROP_FRAME_HEIGHT))))
+        cap = cv2.VideoCapture(camera_index)
+        # vid_writer = cv2.VideoWriter(output_file, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 30, (round(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), round(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
         records = []
 
         frame_number = 0
         while True:
             ret, frame = cap.read()
-            curr_ms = cap.get(cv.CAP_PROP_POS_MSEC)
+            curr_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
 
             if ret != True:
                 break
 
             frame_number += 1
 
-            blob = cv.dnn.blobFromImage(
+            blob = cv2.dnn.blobFromImage(
                 frame, 1/255, (INPUT_WIDTH, INPUT_HEIGHT), [0, 0, 0], 1, crop=False)
             self.net.setInput(blob)
             raw_output = self.net.forward(self.get_outputs_names())
@@ -125,10 +125,10 @@ class ObjectDetector:
 
             self.label_frame(frame, detections)
 
-            cv.imshow("Video", frame)
+            cv2.imshow("Video", frame)
             # vid_writer.write(frame.astype(np.uint8))
 
-            if cv.waitKey(1) & 0XFF == ord('q'):
+            if cv2.waitKey(1) & 0XFF == ord('q'):
                 break
 
         cap.release()
@@ -137,21 +137,21 @@ class ObjectDetector:
         return pd.DataFrame(records)
 
     def stream_videofile(self, file_path, process):
-        cap = cv.VideoCapture(file_path)
-        fps = cap.get(cv.CAP_PROP_FPS)
+        cap = cv2.VideoCapture(file_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
 
         frame_number = 0
 
         try: 
             while True:
-                cap.set(cv.CAP_PROP_POS_FRAMES, frame_number * (fps // 5))
-                curr_frame = cap.get(cv.CAP_PROP_POS_FRAMES)
-                curr_ms = cap.get(cv.CAP_PROP_POS_MSEC)
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number * (fps // 5))
+                curr_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
+                curr_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                blob = cv.dnn.blobFromImage(
+                blob = cv2.dnn.blobFromImage(
                     frame, 1/255, (INPUT_WIDTH, INPUT_HEIGHT), [0, 0, 0], 1, crop=False)
                 self.net.setInput(blob)
 
