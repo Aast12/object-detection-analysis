@@ -145,9 +145,12 @@ class ObjectDetector:
         try: 
             while True:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number * (fps // 5))
+                
+                ret, frame = cap.read()
+
                 curr_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
                 curr_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
-                ret, frame = cap.read()
+                
                 if not ret:
                     break
 
