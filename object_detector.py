@@ -139,6 +139,7 @@ class ObjectDetector:
     def stream_videofile(self, file_path, process):
         cap = cv2.VideoCapture(file_path)
         fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
         frame_number = 0
 
@@ -162,10 +163,12 @@ class ObjectDetector:
 
                 detections = self.process_output(frame, raw_output)
 
-                process(detections, curr_frame, curr_ms)
+                progress = curr_frame / total_frames
+                process(detections, curr_frame, curr_ms, progress)
 
                 frame_number += 1
         except:
             cap.release()    
+
 
         cap.release()
