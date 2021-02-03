@@ -40,11 +40,63 @@ class VideoAnalysis:
         concatenated = pd.concat([instances_per_timestamp, missing_series])
 
         return concatenated.sort_index()
+    def get_timeranges_by_instance_counts(self, class_counts, second_tolerance = 2):
+
+        assert isinstance(class_counts, dict)
+        target_classes = list(class_counts.keys())
+        records = self.records
+
+        # Filtra registros que solo estan en ciertas clases
+        records_by_class = records[records['class'].isin(target_classes)]
+
+        # Crea una pivot table con la cuenta de instancias en cada timestamp
+        ts_class_records = records_by_class[['timestamp', 'class']]
+        instance_counts = ts_class_records.pivot_table(index='timestamp', columns='class', aggfunc=len)
+
+        # obtiene condiciones para filtrar por la cantidad de instancias
+        instance_count_conditions = []
+        for classname in class_counts:
+            instance_count_conditions.append(instance_counts[classname] == class_counts[classname])
+
+        timestamps_list = instance_counts[np.logical_and(*instance_count_conditions)].index
+
+        # filtra los registros cuyos timestamps tienen todas las clases
+        filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(timestamps_list)]
+
+        min_timestamp = filtered_timestamp_records['timestamp'].min()
+        max_timestamp = filtered_timestamp_records['timestamp'].max()
+
+        # Dataframe con solo los timestamps
+        filtered_timestamps = filtered_timestamp_records[['timestamp']]
+
+        # calcula diferencia entre frames consecutivos (Si hay mucha diferencia, las detecciones
+        # ocurren en diferentes lapsos de tiempo)
+        filtered_timestamps['time_diff'] = filtered_timestamps.diff()[
+            'timestamp']
+
+        time_breakpoints = filtered_timestamps[filtered_timestamps['time_diff']
+                                                > second_tolerance]
+
+        timestamp_pairs = []
+        previous_timestamp = min_timestamp
+
+        # Crea los rangos de tiempo con separaciones en donde hay mucha diferencia de tiempo
+        if len(filtered_timestamps) > 0 and len(time_breakpoints) == 0:
+            timestamp_pairs.append((min_timestamp, max_timestamp))
+
+        max_index = time_breakpoints.index.max()
+        for index, row in time_breakpoints.iterrows():
+            timestamp_pairs.append(
+                (previous_timestamp, row['timestamp'] - row['time_diff']))
+            previous_timestamp = row['timestamp']
+
+            if index == max_index:
+                timestamp_pairs.append((row['timestamp'], max_timestamp))
+
+        return timestamp_pairs
 
     def get_timeranges_with_classes(self, target_classes, second_tolerance=2):
-
-        #  = ['person', 'bicycle']
-        assert  isinstance(target_classes, list)
+        assert isinstance(target_classes, list)
         target_classes = list(set(target_classes))
         records = self.records
 
@@ -52,13 +104,13 @@ class VideoAnalysis:
         records_by_class = records[records['class'].isin(target_classes)]
 
         # Obtiene timestamps en los que se detectaron las n (target_clases) clases
-        condition = records_by_class.groupby('timestamp').nunique()[
+        timestamp_list = records_by_class.groupby('timestamp').nunique()[
             'class'] == len(target_classes)
-        condition = condition[condition == True]
+        timestamp_list = timestamp_list[timestamp_list == True].index
 
         # filtra los registros cuyos timestamps tienen todas las clases
         filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(
-            condition.index)]
+            timestamp_list)]
 
         min_timestamp = filtered_timestamp_records['timestamp'].min()
         max_timestamp = filtered_timestamp_records['timestamp'].max()
@@ -73,7 +125,7 @@ class VideoAnalysis:
 
         time_breakpoints = filtered_timestamps[filtered_timestamps['time_diff']
                                                > second_tolerance]
-        
+
         timestamp_pairs = []
         previous_timestamp = min_timestamp
 
