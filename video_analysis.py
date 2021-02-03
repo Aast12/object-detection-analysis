@@ -40,6 +40,41 @@ class VideoAnalysis:
         concatenated = pd.concat([instances_per_timestamp, missing_series])
 
         return concatenated.sort_index()
+
+    def get_timeranges(self, filtered_records, second_tolerance=2):
+        
+        min_timestamp = filtered_records['timestamp'].min()
+        max_timestamp = filtered_records['timestamp'].max()
+
+        # Dataframe con solo los timestamps
+        filtered_timestamps = filtered_records[['timestamp']]
+
+        # calcula diferencia entre frames consecutivos (Si hay mucha diferencia, las detecciones
+        # ocurren en diferentes lapsos de tiempo)
+        filtered_timestamps['time_diff'] = filtered_timestamps.diff()[
+            'timestamp']
+
+        time_breakpoints = filtered_timestamps[filtered_timestamps['time_diff']
+                                               > second_tolerance]
+
+        time_ranges = []
+        previous_timestamp = min_timestamp
+
+        # Crea los rangos de tiempo con separaciones en donde hay mucha diferencia de tiempo
+        if len(filtered_timestamps) > 0 and len(time_breakpoints) == 0:
+            time_ranges.append((min_timestamp, max_timestamp))
+
+        max_index = time_breakpoints.index.max()
+        for index, row in time_breakpoints.iterrows():
+            time_ranges.append(
+                (previous_timestamp, row['timestamp'] - row['time_diff']))
+            previous_timestamp = row['timestamp']
+
+            if index == max_index:
+                time_ranges.append((row['timestamp'], max_timestamp))
+
+        return time_ranges
+    
     def get_timeranges_by_instance_counts(self, class_counts, second_tolerance = 2):
 
         assert isinstance(class_counts, dict)
@@ -63,39 +98,10 @@ class VideoAnalysis:
         # filtra los registros cuyos timestamps tienen todas las clases
         filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(timestamps_list)]
 
-        min_timestamp = filtered_timestamp_records['timestamp'].min()
-        max_timestamp = filtered_timestamp_records['timestamp'].max()
-
-        # Dataframe con solo los timestamps
-        filtered_timestamps = filtered_timestamp_records[['timestamp']]
-
-        # calcula diferencia entre frames consecutivos (Si hay mucha diferencia, las detecciones
-        # ocurren en diferentes lapsos de tiempo)
-        filtered_timestamps['time_diff'] = filtered_timestamps.diff()[
-            'timestamp']
-
-        time_breakpoints = filtered_timestamps[filtered_timestamps['time_diff']
-                                                > second_tolerance]
-
-        timestamp_pairs = []
-        previous_timestamp = min_timestamp
-
-        # Crea los rangos de tiempo con separaciones en donde hay mucha diferencia de tiempo
-        if len(filtered_timestamps) > 0 and len(time_breakpoints) == 0:
-            timestamp_pairs.append((min_timestamp, max_timestamp))
-
-        max_index = time_breakpoints.index.max()
-        for index, row in time_breakpoints.iterrows():
-            timestamp_pairs.append(
-                (previous_timestamp, row['timestamp'] - row['time_diff']))
-            previous_timestamp = row['timestamp']
-
-            if index == max_index:
-                timestamp_pairs.append((row['timestamp'], max_timestamp))
-
-        return timestamp_pairs
+        return self.get_timeranges(filtered_timestamp_records, second_tolerance)
 
     def get_timeranges_with_classes(self, target_classes, second_tolerance=2):
+        
         assert isinstance(target_classes, list)
         target_classes = list(set(target_classes))
         records = self.records
@@ -112,37 +118,7 @@ class VideoAnalysis:
         filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(
             timestamp_list)]
 
-        min_timestamp = filtered_timestamp_records['timestamp'].min()
-        max_timestamp = filtered_timestamp_records['timestamp'].max()
-
-        # Dataframe con solo los timestamps
-        filtered_timestamps = filtered_timestamp_records[['timestamp']]
-
-        # calcula diferencia entre frames consecutivos (Si hay mucha diferencia, las detecciones
-        # ocurren en diferentes lapsos de tiempo)
-        filtered_timestamps['time_diff'] = filtered_timestamps.diff()[
-            'timestamp']
-
-        time_breakpoints = filtered_timestamps[filtered_timestamps['time_diff']
-                                               > second_tolerance]
-
-        timestamp_pairs = []
-        previous_timestamp = min_timestamp
-
-        # Crea los rangos de tiempo con separaciones en donde hay mucha diferencia de tiempo
-        if len(filtered_timestamps) > 0 and len(time_breakpoints) == 0:
-            timestamp_pairs.append((min_timestamp, max_timestamp))
-
-        max_index = time_breakpoints.index.max()
-        for index, row in time_breakpoints.iterrows():
-            timestamp_pairs.append(
-                (previous_timestamp, row['timestamp'] - row['time_diff']))
-            previous_timestamp = row['timestamp']
-
-            if index == max_index:
-                timestamp_pairs.append((row['timestamp'], max_timestamp))
-
-        return timestamp_pairs
+        return self.get_timeranges(filtered_timestamp_records, second_tolerance)
 
     def plot_occurrences(self, classes, start_time=0, end_time=-1):
 
