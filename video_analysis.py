@@ -9,6 +9,7 @@ class VideoAnalysis:
 
     def __init__(self, records) -> None:
         self.records = records
+        # self.records['timestamp'] = self.records['timestamp'] / 1000 
 
     def get_class_occurrences(self, classname, start_time=0, end_time=-1):
         max_timestamp = self.records['timestamp'].max()
@@ -41,7 +42,7 @@ class VideoAnalysis:
 
         return concatenated.sort_index()
 
-    def get_timeranges(self, filtered_records, second_tolerance=2):
+    def get_timeranges(self, filtered_records, time_tolerance = 2000):
         
         min_timestamp = filtered_records['timestamp'].min()
         max_timestamp = filtered_records['timestamp'].max()
@@ -55,7 +56,7 @@ class VideoAnalysis:
             'timestamp']
 
         time_breakpoints = filtered_timestamps[filtered_timestamps['time_diff']
-                                               > second_tolerance]
+                                               > time_tolerance]
 
         time_ranges = []
         previous_timestamp = min_timestamp
@@ -75,7 +76,7 @@ class VideoAnalysis:
 
         return time_ranges
     
-    def get_timeranges_by_instance_counts(self, class_counts, second_tolerance = 2):
+    def get_timeranges_by_instance_counts(self, class_counts, time_tolerance = 2000):
 
         assert isinstance(class_counts, dict)
         target_classes = list(class_counts.keys())
@@ -98,9 +99,9 @@ class VideoAnalysis:
         # filtra los registros cuyos timestamps tienen todas las clases
         filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(timestamps_list)]
 
-        return self.get_timeranges(filtered_timestamp_records, second_tolerance)
+        return self.get_timeranges(filtered_timestamp_records, time_tolerance)
 
-    def get_timeranges_with_classes(self, target_classes, second_tolerance=2):
+    def get_timeranges_with_classes(self, target_classes, time_tolerance=2):
         
         assert isinstance(target_classes, list)
         target_classes = list(set(target_classes))
@@ -118,7 +119,7 @@ class VideoAnalysis:
         filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(
             timestamp_list)]
 
-        return self.get_timeranges(filtered_timestamp_records, second_tolerance)
+        return self.get_timeranges(filtered_timestamp_records, time_tolerance)
 
     def plot_occurrences(self, classes, start_time=0, end_time=-1):
 
