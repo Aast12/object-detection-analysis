@@ -125,7 +125,7 @@ class ObjectDetector:
 
             records = records + self.build_records(detections, frame_number, curr_ms)
 
-            self.label_frame(frame, detections)
+            # self.label_frame(frame, detections)
 
             cv2.imshow("Video", frame)
             # vid_writer.write(frame.astype(np.uint8))
@@ -136,7 +136,7 @@ class ObjectDetector:
         cap.release()
         # vid_writer.release()
 
-        return pd.DataFrame(records)
+        return records
 
     def stream_videofile(self, file_path, process, detection_fps = 5):
         cap = cv2.VideoCapture(file_path)
