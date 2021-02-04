@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import math
 import matplotlib.pyplot as plt
-from streamlit.caching import clear_cache
 
 
 class VideoAnalysis:
@@ -43,6 +42,31 @@ class VideoAnalysis:
 
         return concatenated.sort_index()
 
+    def get_unique_classes(self, start_time=0, end_time=-1, as_seconds=False):
+        records = self.records.copy()
+        if as_seconds:
+            start_time *= 1000
+            end_time *= 1000
+
+        filtered_records = records[records['timestamp'] >= start_time]
+        if end_time != -1:
+            filtered_records = filtered_records[filtered_records['timestamp'] <= end_time]
+
+        return filtered_records['class'].unique()
+
+    def get_complete_class_counts(self, as_seconds=False):
+        processed_records = self.records.copy()
+        if as_seconds:
+            processed_records['timestamp'] = processed_records['timestamp'] / 1000
+        ts_class_records = processed_records[['timestamp', 'class']]
+        instance_counts = ts_class_records.pivot_table(index='timestamp', columns='class', aggfunc=len)
+        instance_counts = instance_counts.fillna(0)
+
+        df = pd.DataFrame(instance_counts.values, columns=list(instance_counts.columns))
+        df['timestamp'] = instance_counts.index
+
+        return df
+
     def get_timeranges(self, filtered_records, time_tolerance = 2000):
         
         min_timestamp = filtered_records['timestamp'].min()
@@ -80,7 +104,7 @@ class VideoAnalysis:
     def get_timeranges_by_instance_counts(self, class_counts, time_tolerance = 2000):
         assert isinstance(class_counts, dict)
         target_classes = list(class_counts.keys())
-        records = self.records
+        records = self.records.copy()
 
         # Filtra registros que solo estan en ciertas clases
         records_by_class = records[records['class'].isin(target_classes)]
@@ -108,7 +132,7 @@ class VideoAnalysis:
         
         assert isinstance(target_classes, list)
         target_classes = list(set(target_classes))
-        records = self.records
+        records = self.records.copy()
 
         # Filtra registros que solo estan en ciertas clases
         records_by_class = records[records['class'].isin(target_classes)]
@@ -123,38 +147,3 @@ class VideoAnalysis:
             timestamp_list)]
 
         return self.get_timeranges(filtered_timestamp_records, time_tolerance)
-
-    def plot_occurrences(self, classes, start_time=0, end_time=-1):
-
-        plot_counts = len(classes)
-
-        dims = int(math.ceil(math.sqrt(plot_counts)))
-        print(dims)
-        fig, axs = plt.subplots(dims, dims, squeeze=False)
-
-        class_index = 0
-        for i in range(dims):
-            for j in range(dims):
-                if class_index >= plot_counts:
-                    break
-                classname = classes[class_index]
-                data = self.get_class_occurrences(
-                    classname, start_time, end_time)
-
-                ts = np.array(data.index)
-                class_counts = np.array(data)
-
-                # plt.title(classname)
-                # plt.ylabel('instancias')
-                # plt.xlabel('segundos')
-                # plt.step(ts, class_counts)
-                # plt.show()
-                axs[i, j].set_title(classname)
-                axs[i, j].step(ts, class_counts)
-                class_index += 1
-
-        for ax in axs.flat:
-            ax.set(xlabel='segundos', ylabel='instancias')
-
-        for ax in axs.flat:
-            ax.label_outer()
