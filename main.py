@@ -16,7 +16,7 @@ detector = ObjectDetector('config/yolov4.weights',
                           'config/yolov4.cfg', 'config/coco.names')
 
 analysis_opt = st.radio('Selecciona un método para hacer análisis', ['Archivo de video', 'CSV con registros'])
-
+dps = st.number_input('Detecciones por segundo', min_value=1, max_value=30,step=1, value=1)
 
 video_progress = st.progress(0)
 
@@ -24,8 +24,8 @@ def process(progress):
     print(progress)
     video_progress.progress(progress)
 
-def process_video(filename):
-    return pd.DataFrame(detector.stream_videofile(filename, process, 1))
+def process_video(filename, dps):
+    return pd.DataFrame(detector.stream_videofile(filename, process, dps))
 
 f = st.file_uploader('Selecciona un archivo')
 
@@ -35,7 +35,7 @@ def get_records():
         if f is not None:
             tfile = tempfile.NamedTemporaryFile(delete=False)
             tfile.write(f.read())
-            return process_video(tfile.name)
+            return process_video(tfile.name, dps)
 
     elif analysis_opt == 'CSV con registros':
         if f is not None:
@@ -81,6 +81,8 @@ def compute_analysis(records):
 
     st.header('Buscar rangos de tiempo donde aparecen un conjunto de clases')
 
+    single_class_time_tolerance = st.number_input('Tolerancia de separación de frames (en ms)', min_value=0, step=1000, value=1000)
+
     s1_col1, s1_col2 = st.beta_columns(2)
 
     with s1_col1:
@@ -89,7 +91,7 @@ def compute_analysis(records):
     with s1_col2:    
         ranges = []
         if len(class_selection) > 0:
-            ranges = video_analysis.get_timeranges_with_classes(class_selection)
+            ranges = video_analysis.get_timeranges_with_classes(class_selection, single_class_time_tolerance)
         
         range_table = []
         for rng in ranges:
@@ -105,6 +107,8 @@ def compute_analysis(records):
 
     st.header('Buscar rangos de tiempo donde aparecen una cantidad especifica de instancias')
 
+    instance_count_time_tolerance = st.number_input('Tolerancia de separación de frames (en ms)', min_value=0, step=1000, value=1000, key='instance_tolerance')
+
     s2_col1, s2_col2 = st.beta_columns(2)
 
     with s2_col1:
@@ -119,7 +123,7 @@ def compute_analysis(records):
         
         ranges = []
         if len(clean_selections.keys()) > 0:
-            ranges = video_analysis.get_timeranges_by_instance_counts(clean_selections)
+            ranges = video_analysis.get_timeranges_by_instance_counts(clean_selections, instance_count_time_tolerance)
         
         range_table = []
         for rng in ranges:
