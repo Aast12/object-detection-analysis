@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import matplotlib.pyplot as plt
+from streamlit.caching import clear_cache
 
 
 class VideoAnalysis:
@@ -77,7 +78,6 @@ class VideoAnalysis:
         return time_ranges
     
     def get_timeranges_by_instance_counts(self, class_counts, time_tolerance = 2000):
-
         assert isinstance(class_counts, dict)
         target_classes = list(class_counts.keys())
         records = self.records
@@ -87,21 +87,24 @@ class VideoAnalysis:
 
         # Crea una pivot table con la cuenta de instancias en cada timestamp
         ts_class_records = records_by_class[['timestamp', 'class']]
-        instance_counts = ts_class_records.pivot_table(index='timestamp', columns='class', aggfunc=len)
+        instance_counts = ts_class_records.pivot_table(index='timestamp', columns='class', aggfunc=len, fill_value=0)
 
         # obtiene condiciones para filtrar por la cantidad de instancias
         instance_count_conditions = []
-        for classname in class_counts:
-            instance_count_conditions.append(instance_counts[classname] == class_counts[classname])
+        for i, classname in enumerate(class_counts):
+            if i > 0:
+                instance_count_conditions = np.logical_and(instance_count_conditions, instance_counts[classname] == class_counts[classname])
+            else:
+                instance_count_conditions = instance_counts[classname] == class_counts[classname]
 
-        timestamps_list = instance_counts[np.logical_and(*instance_count_conditions)].index
+        timestamps_list = instance_counts[instance_count_conditions].index
 
         # filtra los registros cuyos timestamps tienen todas las clases
         filtered_timestamp_records = records_by_class[records_by_class['timestamp'].isin(timestamps_list)]
 
         return self.get_timeranges(filtered_timestamp_records, time_tolerance)
 
-    def get_timeranges_with_classes(self, target_classes, time_tolerance=2):
+    def get_timeranges_with_classes(self, target_classes, time_tolerance = 2000):
         
         assert isinstance(target_classes, list)
         target_classes = list(set(target_classes))
