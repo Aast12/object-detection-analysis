@@ -37,7 +37,7 @@ Obtiene las clases encontradas en el video en el rango [start_time, end_time] de
 | Nombre | Tipo | Descripción |
 | --- | --- | --- |
 | `as_seconds` | booleano | indica si los rangos deben considerarse como segundos. Por defecto se usan milisegundos. |
-| `star_time` | entero | | El limite inferior de tiempo para buscar.|
+| `star_time` | entero | El limite inferior de tiempo para buscar.|
 | `end_time` | entero | El limite superior de tiempo para buscar. -1 indica que se buscará hasta el final del video. |
 
 
@@ -50,7 +50,7 @@ Obtiene una lista de rangos de tiempo en los que aparecen `target_classes`.
 | Nombre | Tipo | Descripción |
 | --- | --- | --- |
 | `target_classes` | string[] | Lista de clases de objetos a buscar en el video |
-| `time_tolerance` | entero | | Es la tolerancia en ms para que dos detecciones se consideren dentro de un mismo rango de tiempo. |
+| `time_tolerance` | entero | Es la tolerancia en ms para que dos detecciones se consideren dentro de un mismo rango de tiempo. |
 
 ### get_timeranges_by_instance_counts(class_counts, time_tolerance = 2000):
 
@@ -61,4 +61,4 @@ Obtiene una lista de rangos de tiempo en los que aparecen las clases en `class_c
 | Nombre | Tipo | Descripción |
 | --- | --- | --- |
 | `class_counts` | dict | Diccionario con repeticiones de clases. Mapea nombres de clases a el número de instancias que se deben buscar de esa clase |
-| `time_tolerance` | entero | | Es la tolerancia en ms para que dos detecciones se consideren dentro de un mismo rango de tiempo. |
+| `time_tolerance` | entero | Es la tolerancia en ms para que dos detecciones se consideren dentro de un mismo rango de tiempo. |
