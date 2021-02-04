@@ -26,6 +26,8 @@ class ObjectDetector:
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
+    def get_class_names(self):
+        return self.classes
     def draw_labels(self, detections, img) -> None:
         font = cv2.FONT_HERSHEY_PLAIN
         for detection in detections:
@@ -136,16 +138,16 @@ class ObjectDetector:
 
         return pd.DataFrame(records)
 
-    def stream_videofile(self, file_path, process):
+    def stream_videofile(self, file_path, process, detection_fps = 5):
         cap = cv2.VideoCapture(file_path)
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
         frame_number = 0
-
+        records = []
         try: 
             while True:
-                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number * (fps // 5))
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number * (fps // detection_fps))
                 
                 ret, frame = cap.read()
 
@@ -164,7 +166,9 @@ class ObjectDetector:
                 detections = self.process_output(frame, raw_output)
 
                 progress = curr_frame / total_frames
-                process(detections, curr_frame, curr_ms, progress)
+                process(progress)
+
+                records = records + self.build_records(detections, frame_number, curr_ms)
 
                 frame_number += 1
         except:
@@ -172,3 +176,4 @@ class ObjectDetector:
 
 
         cap.release()
+        return records
